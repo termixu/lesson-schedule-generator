@@ -1,1 +1,263 @@
--
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>One‑Sheet Schedule — генератор расписания для учителя</title>
+    <!-- TailwindCSS CDN (лёгкий, минимальный) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Кастомные стили (только для таблицы, чтобы не перебивать Tailwind) -->
+    <style>
+        /* Делаем таблицу читаемой на телефоне */
+        @media (max-width: 640px) {
+            .schedule-table td, .schedule-table th {
+                padding: 0.5rem;
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans antialiased">
+
+    <div class="max-w-6xl mx-auto px-4 py-8 md:py-12">
+        <!-- Шапка -->
+        <div class="text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">One‑Sheet Schedule</h1>
+            <p class="text-gray-500 mt-2">Генератор расписания + игровые приёмы для каждого урока</p>
+        </div>
+
+        <!-- Главная карточка с формой -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8 mb-8">
+            <form id="scheduleForm" class="space-y-6">
+                <!-- Поле: темы / предметы -->
+                <div>
+                    <label for="topics" class="block text-sm font-medium text-gray-700 mb-1">Темы / предметы (через запятую)</label>
+                    <textarea id="topics" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="Пример: Дроби, Уравнения, Проценты, Координаты">Дроби, Уравнения, Проценты, Координаты</textarea>
+                    <p class="text-xs text-gray-400 mt-1">Порядок сохраняется. Темы распределятся циклически по выбранным дням.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Количество занятий в неделю -->
+                    <div>
+                        <label for="lessonsCount" class="block text-sm font-medium text-gray-700 mb-1">Занятий в неделю</label>
+                        <input type="number" id="lessonsCount" value="4" min="1" max="20" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                    </div>
+
+                    <!-- Длительность занятия (минуты) -->
+                    <div>
+                        <label for="duration" class="block text-sm font-medium text-gray-700 mb-1">Длительность (мин)</label>
+                        <input type="number" id="duration" value="45" min="15" max="180" step="15" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                    </div>
+                </div>
+
+                <!-- Выбор дней недели -->
+                <div>
+                    <span class="block text-sm font-medium text-gray-700 mb-2">Дни занятий</span>
+                    <div class="flex flex-wrap gap-3">
+                        <label class="inline-flex items-center"><input type="checkbox" class="day-checkbox w-4 h-4 text-blue-600" value="ПН"> <span class="ml-2">ПН</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" class="day-checkbox w-4 h-4 text-blue-600" value="ВТ"> <span class="ml-2">ВТ</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" class="day-checkbox w-4 h-4 text-blue-600" value="СР"> <span class="ml-2">СР</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" class="day-checkbox w-4 h-4 text-blue-600" value="ЧТ"> <span class="ml-2">ЧТ</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" class="day-checkbox w-4 h-4 text-blue-600" value="ПТ"> <span class="ml-2">ПТ</span></label>
+                        <label class="inline-flex items-center"><input type="checkbox" class="day-checkbox w-4 h-4 text-blue-600" value="СБ"> <span class="ml-2">СБ</span></label>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Поставьте галочки на тех днях, когда планируете занятия.</p>
+                </div>
+
+                <!-- Выбор игрового подхода -->
+                <div>
+                    <label for="gameStyle" class="block text-sm font-medium text-gray-700 mb-1">Базовый игровой подход</label>
+                    <select id="gameStyle" class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white">
+                        <option value="quest">🎲 Квест / Приключение</option>
+                        <option value="competition">🏆 Соревнование</option>
+                        <option value="roleplay">🎭 Ролевая игра</option>
+                        <option value="board">🎲 Настольная игра</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="w-full md:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition shadow-sm">Сгенерировать расписание</button>
+            </form>
+        </div>
+
+        <!-- Результат (таблица с расписанием) -->
+        <div id="resultArea" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8 hidden">
+            <div class="flex justify-between items-center flex-wrap gap-3 mb-5">
+                <h2 class="text-xl font-semibold text-gray-800">📅 Расписание на неделю</h2>
+                <button id="copyBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition">Копировать как текст</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="schedule-table w-full text-left border-collapse">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-sm font-semibold text-gray-700 border-b">День</th>
+                            <th class="px-4 py-3 text-sm font-semibold text-gray-700 border-b">Время</th>
+                            <th class="px-4 py-3 text-sm font-semibold text-gray-700 border-b">Тема</th>
+                            <th class="px-4 py-3 text-sm font-semibold text-gray-700 border-b">Игровой приём</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleTableBody">
+                        <!-- Строки таблицы будут добавляться через JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer class="text-center text-xs text-gray-400 mt-12 border-t pt-6">
+            One‑Sheet Schedule — открытый инструмент для преподавателей.
+        </footer>
+    </div>
+
+    <script>
+        (function() {
+            // --- DOM элементы ---
+            const form = document.getElementById('scheduleForm');
+            const resultArea = document.getElementById('resultArea');
+            const tableBody = document.getElementById('scheduleTableBody');
+            const copyBtn = document.getElementById('copyBtn');
+
+            // --- База игровых шаблонов (без AI, но живо) ---
+            const gameTemplates = {
+                quest: [
+                    'Квест: «Найди сокровище», решая задания по теме «{topic}»',
+                    'Приключение: спаси деревню, правильно выполняя упражнения по «{topic}»',
+                    'Исследование: расшифруй древнюю рукопись через задачи на «{topic}»'
+                ],
+                competition: [
+                    'Соревнование: раздели класс на команды, кто быстрее решит примеры по «{topic}»',
+                    'Турнир: таблица лидеров за правильные ответы по теме «{topic}»',
+                    'Эстафета: каждая команда получает вопрос, победитель определяется за 5 раундов'
+                ],
+                roleplay: [
+                    'Ролевая игра: ученики — детективы, раскрывающие дело через {topic}',
+                    'Магазин: продавец и покупатели применяют {topic} для расчётов и диалогов',
+                    'Путешествие во времени: каждое задание переносит учеников в эпоху, связанную с {topic}'
+                ],
+                board: [
+                    'Настолка: брось кубик и выполни задание по «{topic}»',
+                    'Карточная игра: сопоставь термин и определение на тему {topic}',
+                    'Своя игра: выбери категорию и стоимость вопроса по {topic}'
+                ]
+            };
+
+            // --- Функция: случайный элемент массива ---
+            function randomItem(arr) {
+                return arr[Math.floor(Math.random() * arr.length)];
+            }
+
+            // --- Генерация игрового описания ---
+            function generateGameDescription(style, topic) {
+                const templates = gameTemplates[style] || gameTemplates.quest;
+                let template = randomItem(templates);
+                return template.replace(/\{topic\}/g, topic);
+            }
+
+            // --- Основная функция: генерация расписания ---
+            function generateSchedule() {
+                // 1. Получаем и обрабатываем данные формы
+                let topicsRaw = document.getElementById('topics').value.trim();
+                if (!topicsRaw) {
+                    alert('Введите хотя бы одну тему / предмет.');
+                    return null;
+                }
+                let topics = topicsRaw.split(',').map(t => t.trim()).filter(t => t !== '');
+                if (topics.length === 0) return null;
+
+                let lessonsCount = parseInt(document.getElementById('lessonsCount').value, 10);
+                if (isNaN(lessonsCount) || lessonsCount < 1) lessonsCount = 1;
+
+                let duration = parseInt(document.getElementById('duration').value, 10);
+                if (isNaN(duration) || duration < 15) duration = 45;
+
+                let checkboxes = document.querySelectorAll('.day-checkbox:checked');
+                let selectedDays = Array.from(checkboxes).map(cb => cb.value);
+                if (selectedDays.length === 0) {
+                    alert('Выберите хотя бы один день недели.');
+                    return null;
+                }
+
+                let gameStyle = document.getElementById('gameStyle').value;
+
+                // 2. Циклически распределяем темы по дням
+                let schedule = [];
+                let topicIndex = 0;
+                let startHour = 15; // 3 часа дня
+
+                for (let i = 0; i < lessonsCount; i++) {
+                    let day = selectedDays[i % selectedDays.length];
+                    let topic = topics[topicIndex % topics.length];
+                    topicIndex++;
+
+                    let startMin = (i % 3) * duration;  // смещение: 0, 45, 90 минут
+                    let hour = startHour + Math.floor(startMin / 60);
+                    let minute = startMin % 60;
+                    let timeStr = `${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')}`;
+
+                    let gameDesc = generateGameDescription(gameStyle, topic);
+
+                    schedule.push({
+                        day: day,
+                        time: timeStr,
+                        topic: topic,
+                        game: gameDesc
+                    });
+                }
+                return schedule;
+            }
+
+            // --- Отрисовка таблицы ---
+            function renderSchedule(schedule) {
+                if (!schedule || schedule.length === 0) return;
+                tableBody.innerHTML = '';
+                for (let item of schedule) {
+                    let row = tableBody.insertRow();
+                    row.insertCell(0).innerHTML = `<span class="font-medium">${item.day}</span>`;
+                    row.insertCell(1).innerHTML = item.time;
+                    row.insertCell(2).innerHTML = item.topic;
+                    row.insertCell(3).innerHTML = `<span class="text-blue-700 text-sm italic">${item.game}</span>`;
+                }
+                resultArea.classList.remove('hidden');
+            }
+
+            // --- Копирование таблицы как текст ---
+            function copyScheduleAsText() {
+                let rows = tableBody.querySelectorAll('tr');
+                let textRows = [];
+                textRows.push('День\tВремя\tТема\tИгровой приём');
+                for (let row of rows) {
+                    let cells = row.querySelectorAll('td');
+                    let day = cells[0]?.innerText.trim() || '';
+                    let time = cells[1]?.innerText.trim() || '';
+                    let topic = cells[2]?.innerText.trim() || '';
+                    let game = cells[3]?.innerText.trim() || '';
+                    textRows.push(`${day}\t${time}\t${topic}\t${game}`);
+                }
+                let finalText = textRows.join('\n');
+                navigator.clipboard.writeText(finalText).then(() => {
+                    alert('Расписание скопировано в буфер обмена (таблица с табами).');
+                }).catch(() => {
+                    alert('Не удалось скопировать.');
+                });
+            }
+
+            // --- Обработка формы ---
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const schedule = generateSchedule();
+                if (schedule) renderSchedule(schedule);
+            });
+
+            // --- Кнопка копирования ---
+            if (copyBtn) {
+                copyBtn.addEventListener('click', copyScheduleAsText);
+            }
+
+            // Для удобства: предустановим пару дней (ПН, СР, ПТ)
+            // Это сделает пример более наглядным
+            const defaultChecks = ['ПН', 'СР', 'ПТ'];
+            document.querySelectorAll('.day-checkbox').forEach(cb => {
+                if (defaultChecks.includes(cb.value)) cb.checked = true;
+            });
+        })();
+    </script>
+</body>
+</html>
