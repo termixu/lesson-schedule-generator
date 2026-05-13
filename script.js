@@ -66,7 +66,7 @@
         let duration = parseInt(document.getElementById('duration').value, 10);
         if (isNaN(duration) || duration < 15) duration = 45;
 
-        // 4. Выбранные дни недели
+        // 4. Выбранные дни недели (включая воскресенье)
         let checkboxes = document.querySelectorAll('.day-checkbox:checked');
         let selectedDays = Array.from(checkboxes).map(cb => cb.value);
         if (selectedDays.length === 0) {
@@ -113,21 +113,16 @@
         tableBody.innerHTML = '';
         for (let item of schedule) {
             const row = tableBody.insertRow();
-            // Ячейка День
             row.insertCell(0).innerHTML = `<span class="font-medium">${item.day}</span>`;
-            // Ячейка Время
             row.insertCell(1).innerHTML = item.time;
-            // Ячейка Тема
             row.insertCell(2).innerHTML = item.topic;
-            // Ячейка Игровой приём (с классом для стилизации)
             row.insertCell(3).innerHTML = `<span class="text-blue-700 text-sm italic bg-blue-50 px-2 py-0.5 rounded-md inline-block">${item.game}</span>`;
         }
         resultArea.classList.remove('hidden');
-        // Прокрутка к результатам
         resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    // Копирование расписания в виде текста (таблица с табами)
+    // Копирование расписания в виде текста
     function copyScheduleAsText() {
         const rows = tableBody.querySelectorAll('tr');
         if (!rows.length) {
@@ -147,13 +142,13 @@
         }
         const finalText = textRows.join('\n');
         navigator.clipboard.writeText(finalText).then(() => {
-            alert('✅ Расписание скопировано в буфер обмена (таблица с табами).\nВставьте в Excel, Google Docs или любой текстовый редактор.');
+            alert('✅ Расписание скопировано в буфер обмена (таблица с табами).');
         }).catch(() => {
-            alert('❌ Не удалось скопировать.');
+            alert('❌ Не удалось копировать.');
         });
     }
 
-    // ---------- Обработчики событий ----------
+    // ---------- Обработчики ----------
     if (form) {
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -166,7 +161,7 @@
         copyBtn.addEventListener('click', copyScheduleAsText);
     }
 
-    // ---------- Установка дней по умолчанию (ПН, СР, ПТ) ----------
+    // Установка дней по умолчанию: ПН, СР, ПТ (воскресенье оставляем на усмотрение пользователя)
     const defaultDays = ['ПН', 'СР', 'ПТ'];
     const checkboxes = document.querySelectorAll('.day-checkbox');
     checkboxes.forEach(cb => {
